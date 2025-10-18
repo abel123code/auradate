@@ -87,6 +87,18 @@ class SendNotificationRequest(BaseModel):
     sound: str = "default"
     priority: str = "high"
 
+class StartFacilitatedConversationRequest(BaseModel):
+    user1: str
+    user2: str
+    room_name: str
+
+class LaunchFacilitatorRequest(BaseModel):
+    room_name: str
+    user1_memories: list
+    user2_memories: list
+    user1: str
+    user2: str
+
 class CallResponse(BaseModel):
     call_id: str
     room_name: str
@@ -783,6 +795,139 @@ Example: ["How's your photosynthesis revision going?", "Need help with that alge
             "user_info": display_name,
             "error": "Using fallback questions"
         }
+
+@app.post("/api/start-facilitated-conversation")
+async def start_facilitated_conversation(request: StartFacilitatedConversationRequest):
+    """Start a facilitated conversation between two users"""
+    try:
+        print(f"[server] Starting facilitated conversation between {request.user1} and {request.user2}")
+        
+        # Import memory service
+        try:
+            from memory_service import get_memory_service
+            memory_service = get_memory_service()
+        except Exception as e:
+            print(f"[server] Memory service not available: {e}")
+            memory_service = None
+        
+        # Fetch memories for both users
+        user1_memories = []
+        user2_memories = []
+        
+        if memory_service:
+            try:
+                user1_memories = memory_service.get_user_memories(request.user1)
+                user2_memories = memory_service.get_user_memories(request.user2)
+                print(f"[server] Fetched {len(user1_memories)} memories for {request.user1}, {len(user2_memories)} for {request.user2}")
+            except Exception as e:
+                print(f"[server] Error fetching memories: {e}")
+        
+        # Analyze shared interests
+        common_interests = []
+        conversation_starters = []
+        
+        if user1_memories and user2_memories:
+            # Simple analysis - extract keywords and find common ones
+            user1_keywords = set()
+            user2_keywords = set()
+            
+            for memory in user1_memories:
+                words = memory.get('memory', '').lower().split()
+                user1_keywords.update([w for w in words if len(w) > 4])
+            
+            for memory in user2_memories:
+                words = memory.get('memory', '').lower().split()
+                user2_keywords.update([w for w in words if len(w) > 4])
+            
+            common_keywords = user1_keywords.intersection(user2_keywords)
+            common_interests = list(common_keywords)[:5]  # Top 5 common interests
+            
+            # Generate conversation starters
+            if common_interests:
+                conversation_starters = [
+                    f"You both seem interested in {common_interests[0]}. Tell me more about that!",
+                    f"I noticed you both mentioned {common_interests[1] if len(common_interests) > 1 else common_interests[0]}. What draws you to that?",
+                    "What's something you're both passionate about?",
+                    "Share a recent experience that made you happy",
+                    "What's something you'd love to learn more about?"
+                ]
+            else:
+                conversation_starters = [
+                    "What's something you're passionate about?",
+                    "Share a recent experience that made you smile",
+                    "What's a goal you're working towards?",
+                    "What's something you'd love to learn more about?",
+                    "Tell me about a place you'd love to visit"
+                ]
+        else:
+            # Default conversation starters if no memories
+            conversation_starters = [
+                "What's something you're passionate about?",
+                "Share a recent experience that made you happy",
+                "What's a goal you're working towards?",
+                "What's something you'd love to learn more about?",
+                "Tell me about a place you'd love to visit"
+            ]
+        
+        # Generate LiveKit token for the user (audio-only)
+        user_token = api.AccessToken(LK_API_KEY, LK_API_SECRET) \
+            .with_identity(f"user_{request.user1}") \
+            .with_name(request.user1) \
+            .with_grants(api.VideoGrants(
+                room_join=True,
+                room=request.room_name,
+                can_publish=True,
+                can_subscribe=True
+            ))
+        
+        return {
+            "room_name": request.room_name,
+            "user_token": user_token.to_jwt(),
+            "conversation_starters": conversation_starters,
+            "common_interests": common_interests,
+            "livekit_url": LIVEKIT_URL
+        }
+        
+    except Exception as e:
+        print(f"[server] Error starting facilitated conversation: {e}")
+        raise HTTPException(status_code=500, detail="Failed to start facilitated conversation")
+
+@app.post("/api/launch-facilitator")
+async def launch_facilitator(request: LaunchFacilitatorRequest):
+    """Launch the AI facilitator agent for a conversation room"""
+    try:
+        print(f"[server] Launching facilitator agent for room: {request.room_name}")
+        
+        # Start facilitator agent process
+        import subprocess
+        import sys
+        import os
+        
+        # Get the directory of the current script
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        
+        # Start the facilitator agent as a subprocess (like avatar system)
+        process = subprocess.Popen([
+            sys.executable, "facilitator_agent.py", "connect",
+            "--room", request.room_name
+        ], cwd=current_dir, env={
+            **os.environ,
+            'USER1_NAME': request.user1,
+            'USER2_NAME': request.user2,
+            'USER1_MEMORIES': str(request.user1_memories),
+            'USER2_MEMORIES': str(request.user2_memories)
+        })
+        
+        # Store the process for cleanup
+        avatar_processes[request.room_name] = process
+        
+        print(f"[server] Facilitator agent started for room: {request.room_name}")
+        
+        return {"status": "success", "room_name": request.room_name}
+        
+    except Exception as e:
+        print(f"[server] Error launching facilitator agent: {e}")
+        raise HTTPException(status_code=500, detail="Failed to launch facilitator agent")
 
 if __name__ == "__main__":
     import uvicorn

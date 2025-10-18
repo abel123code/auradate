@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
@@ -10,6 +9,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, router } from 'expo-router';
 import { API_BASE_URL } from '../config/api';
+import { useDisplayName } from '../hooks/useDisplayName';
 
 interface Memory {
   memory: string;
@@ -28,6 +28,7 @@ interface UserMemoriesResponse {
 
 export default function MemoriesScreen() {
   const { username } = useLocalSearchParams<{ username: string }>();
+  const { displayName } = useDisplayName();
   const [memories, setMemories] = useState<Memory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,15 +69,19 @@ export default function MemoriesScreen() {
     router.back();
   };
 
-  const formatTimestamp = (timestamp?: string) => {
-    if (!timestamp) return '';
-    
-    try {
-      const date = new Date(timestamp);
-      return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
-    } catch {
-      return timestamp;
+  const handleStartConversation = () => {
+    if (!displayName) {
+      Alert.alert('Error', 'Please set your display name in profile first');
+      return;
     }
+    
+    router.push({
+      pathname: '/voice-facilitator',
+      params: { 
+        otherUser: username,
+        currentUser: displayName 
+      }
+    });
   };
 
   if (loading) {
@@ -91,19 +96,19 @@ export default function MemoriesScreen() {
   if (error) {
     return (
       <View className="flex-1 bg-pink-50">
-        <View className="p-4 bg-white border-b border-pink-200 shadow-sm">
-          <TouchableOpacity onPress={handleBack} className="flex-row items-center mb-4">
+        <View className="p-4 bg-white border-b border-pink-200">
+          <TouchableOpacity onPress={handleBack} className="flex-row items-center">
             <Ionicons name="arrow-back" size={24} color="#ec4899" />
-            <Text className="text-gray-800 ml-2 text-lg font-semibold">Back to Search</Text>
+            <Text className="text-gray-800 ml-2 text-lg font-semibold">Back</Text>
           </TouchableOpacity>
         </View>
 
         <View className="flex-1 items-center justify-center p-8">
-          <Ionicons name="alert-circle-outline" size={80} color="#ef4444" />
-          <Text className="text-gray-800 text-xl font-semibold mt-4 mb-2">
+          <Ionicons name="alert-circle-outline" size={64} color="#ef4444" />
+          <Text className="text-gray-800 text-xl font-semibold mt-6 text-center">
             {error}
           </Text>
-          <Text className="text-gray-600 text-center">
+          <Text className="text-gray-600 text-center mt-2">
             {error === 'User not found' 
               ? `No user found with username "${username}"`
               : 'Please try again later'
@@ -111,7 +116,7 @@ export default function MemoriesScreen() {
           </Text>
           <TouchableOpacity
             onPress={handleBack}
-            className="mt-6 bg-pink-600 px-6 py-3 rounded-lg"
+            className="mt-8 bg-pink-600 px-8 py-3 rounded-full"
           >
             <Text className="text-white font-semibold">Back to Search</Text>
           </TouchableOpacity>
@@ -122,73 +127,41 @@ export default function MemoriesScreen() {
 
   return (
     <View className="flex-1 bg-pink-50">
-      {/* Fixed Header */}
-      <View className="p-4 bg-white border-b border-pink-200 shadow-sm">
-        <TouchableOpacity onPress={handleBack} className="flex-row items-center mb-4">
-          <Ionicons name="arrow-back" size={24} color="#ec4899" />
-          <Text className="text-gray-800 ml-2 text-lg font-semibold">Back to Search</Text>
-        </TouchableOpacity>
-        
-        <View className="bg-pink-50 p-4 rounded-lg border border-pink-200">
-          <Text className="text-xl font-bold text-gray-800 mb-1">
-            {username}
-          </Text>
-          <Text className="text-gray-600 text-sm">
-            {memories.length} {memories.length === 1 ? 'memory' : 'memories'} found
-          </Text>
-        </View>
-      </View>
 
-      {/* Scrollable Content */}
+      {/* Content */}
       {memories.length === 0 ? (
         <View className="flex-1 items-center justify-center p-8">
-          <Ionicons name="time-outline" size={80} color="#6b7280" />
-          <Text className="text-gray-600 text-center mt-4 text-lg">
-            No memories found
+          <Ionicons name="time-outline" size={64} color="#9ca3af" />
+          <Text className="text-gray-600 text-center mt-6 text-lg font-medium">
+            No memories yet
           </Text>
           <Text className="text-gray-500 text-center mt-2">
-            This user hasn't had any conversations yet
+            This user hasn't had any conversations
           </Text>
         </View>
       ) : (
-        <ScrollView 
-          className="flex-1" 
-          contentContainerStyle={{ padding: 16 }}
-          showsVerticalScrollIndicator={true}
-        >
-          <Text className="text-gray-800 text-lg font-semibold mb-4">
-            💭 Memories
-          </Text>
-
-          {memories.map((memory, index) => (
-            <View
-              key={index}
-              className="bg-white p-4 rounded-lg mb-3 border border-pink-200 shadow-sm"
-            >
-              <View className="flex-row items-start">
-                <View className="bg-pink-600 w-8 h-8 rounded-full items-center justify-center mr-3 mt-0.5">
-                  <Text className="text-white font-bold text-sm">{index + 1}</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-gray-800 text-base leading-6 mb-2">
-                    {memory.memory}
-                  </Text>
-                  {memory.metadata?.timestamp && (
-                    <Text className="text-gray-500 text-xs">
-                      {formatTimestamp(memory.metadata.timestamp)}
-                    </Text>
-                  )}
-                </View>
+        <View className="flex-1 items-center justify-center p-8">
+          <View className="bg-white p-8 rounded-2xl border border-pink-200 w-full max-w-sm">
+            <View className="items-center mb-6">
+              <View className="bg-pink-100 w-16 h-16 rounded-full items-center justify-center mb-4">
+                <Ionicons name="chatbubbles" size={32} color="#ec4899" />
               </View>
+              <Text className="text-gray-700 text-center text-base">
+                Ready to start a conversation with {username}
+              </Text>
             </View>
-          ))}
-
-          <View className="bg-white p-4 rounded-lg mt-4 border border-pink-200 shadow-sm">
-            <Text className="text-gray-600 text-sm">
-              💡 These are the memories from {username}'s conversations with AI dating companions.
-            </Text>
+            
+            <TouchableOpacity
+              onPress={handleStartConversation}
+              className="bg-pink-600 py-4 rounded-full flex-row items-center justify-center"
+            >
+              <Ionicons name="chatbubbles" size={20} color="white" />
+              <Text className="text-white font-semibold text-lg ml-2">
+                Start Conversation
+              </Text>
+            </TouchableOpacity>
           </View>
-        </ScrollView>
+        </View>
       )}
     </View>
   );

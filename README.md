@@ -1,15 +1,16 @@
 # AuraDate 💕
 
-An intelligent AI dating companion with persistent memory, built with LiveKit real-time video, Tavus visual avatars, and mem0 Platform for advanced memory management.
+An intelligent AI dating companion with persistent memory, built with LiveKit real-time video, ElevenLabs voice synthesis, and mem0 Platform for advanced memory management.
 
 ## 🌟 Features
 
 - **Real-time Video Calls with AI Avatar**: Voice and video conversations with charming AI dating companions powered by Tavus
-- **English Language Support**: Full English support with natural conversation flow
+- **Voice-Only Dating Facilitator**: AI-powered conversation facilitator for real users on voice dates
 - **Persistent Memory**: Cross-session memory using mem0 Platform API with automatic extraction
 - **Dating Companion**: Engaging, flirty conversations with AI avatars (Alex & Emma)
+- **User Search & Memories**: Search for users and view their dating memories
+- **Conversation Facilitation**: AI facilitator helps real users connect on voice dates
 - **Emotional Support**: Caring companionship and romantic conversation
-- **Conversation Spark**: AI-generated conversation starters to facilitate meaningful connections
 
 ## 🏗️ Architecture
 
@@ -17,10 +18,10 @@ An intelligent AI dating companion with persistent memory, built with LiveKit re
 ┌─────────────────────────────────────────────────────────────────────┐
 │                 FRONTEND (React Native + Expo)                      │
 │   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐            │
-│   │  Call Tab    │  │  Spark Tab   │  │ Profile Tab  │            │
-│   │ - Language   │  │ - User List  │  │ - Display    │            │
-│   │   Selection  │  │ - AI-Gen     │  │   Name       │            │
-│   │ - Video Call │  │   Questions  │  │ - Settings   │            │
+│   │  Date Tab    │  │  Search Tab  │  │ Profile Tab  │            │
+│   │ - Avatar     │  │ - User List  │  │ - Display    │            │
+│   │   Selection  │  │ - Memories   │  │   Name       │            │
+│   │ - Video Call │  │ - Voice Date │  │ - Settings   │            │
 │   └──────┬───────┘  └──────┬───────┘  └──────┬───────┘            │
 │          │                  │                  │                     │
 └──────────┼──────────────────┼──────────────────┼─────────────────────┘
@@ -32,7 +33,8 @@ An intelligent AI dating companion with persistent memory, built with LiveKit re
 │  │  API Endpoints                                        │         │
 │  │  • POST /join-room → Generate tokens + spawn avatar  │         │
 │  │  • GET /api/users → Fetch users from mem0           │         │
-│  │  • POST /api/conversation-starters → Generate Qs    │         │
+│  │  • POST /api/start-facilitated-conversation         │         │
+│  │  • POST /api/launch-facilitator → Start AI agent    │         │
 │  └───────────────────┬───────────────────────────────────┘         │
 │                      │                                              │
 │                      │ Spawns subprocess                            │
@@ -42,8 +44,8 @@ An intelligent AI dating companion with persistent memory, built with LiveKit re
 │  │  ┌─────────────────────────────────────────────────┐ │         │
 │  │  │  AI Components                                  │ │         │
 │  │  │  • Gemini 2.0 Flash (LLM & Conversation)       │ │         │
-│  │  │  • Deepgram (STT: nova-3 / nova-2-general)     │ │         │
-│  │  │  • OpenAI (TTS: "nova" voice - multilingual)   │ │         │
+│  │  │  • Deepgram (STT: nova-3)                       │ │         │
+│  │  │  • ElevenLabs (TTS: Custom voice)               │ │         │
 │  │  │  • Tavus (Visual Avatar with lip-sync)         │ │         │
 │  │  └─────────────────────────────────────────────────┘ │         │
 │  │  ┌─────────────────────────────────────────────────┐ │         │
@@ -95,8 +97,8 @@ An intelligent AI dating companion with persistent memory, built with LiveKit re
 ### AI Services
 
 - **Gemini 2.0 Flash** - LLM for conversation & question generation
-- **Deepgram** - Speech-to-Text (nova-3 for English, nova-2-general for Chinese)
-- **OpenAI** - Text-to-Speech (nova voice, multilingual)
+- **Deepgram** - Speech-to-Text (nova-3 for English)
+- **ElevenLabs** - Text-to-Speech (Custom voice for facilitator)
 - **Tavus** - Visual avatar with lip-sync
 - **mem0 Platform** - Memory extraction, embeddings, and storage
 
@@ -146,11 +148,9 @@ TAVUS_PERSONA_ID=your_persona_id
 
 # AI Services (Required)
 GOOGLE_API_KEY=your_google_api_key   # For Gemini 2.0 Flash
-OPENAI_API_KEY=your_openai_api_key   # For TTS (nova voice)
+ELEVENLABS_API_KEY=your_elevenlabs_api_key  # For TTS (Facilitator voice)
 DEEPGRAM_API_KEY=your_deepgram_api_key  # For STT
 ```
-
-**Note**: Qdrant Cloud is no longer needed! mem0 Platform handles all storage.
 
 ### Installation
 
@@ -198,28 +198,42 @@ npx expo start
 # Scan QR code with Expo Go app (iOS/Android)
 ```
 
-### 3. (Optional) Add Test Users for Conversation Spark
+### 3. (Optional) Add Test Users for Dating
 
 ```bash
 cd server
 python add_test_users.py
-# Adds Henry (CS student) and Isaac (Physics student) to mem0 Platform
+# Adds Henry and Isaac with dating memories to mem0 Platform
 ```
-
-This takes ~30-60 seconds as it calls the mem0 API for each memory.
 
 ## 🎯 Key Features Explained
 
-### 1. **Language-Specific AI**
+### 1. **AI Dating Companions**
 
-- User selects language before call (English or Chinese)
-- **STT Models**:
-  - English: Deepgram `nova-3` with `en-US`
-  - Chinese: Deepgram `nova-2-general` with `zh-CN`
-- **LLM**: Gemini 2.0 Flash with language-specific prompts
-- **TTS**: OpenAI `nova` voice (supports both languages naturally)
+- **Alex & Emma**: Two charming AI avatars for romantic conversations
+- **Persistent Memory**: Remembers past conversations and preferences
+- **Emotional Support**: Caring, flirty, and supportive conversations
+- **Visual Avatars**: Realistic video avatars with lip-sync via Tavus
 
-### 2. **Persistent Memory (mem0 Platform)**
+### 2. **Voice Dating Facilitator**
+
+**How It Works:**
+
+1. User searches for another user in the Search tab
+2. Views their memories and dating history
+3. Clicks "Start Conversation" to begin a voice date
+4. AI facilitator joins the LiveKit room with both users
+5. Facilitator uses both users' memories to suggest conversation topics
+6. Real-time voice conversation with AI guidance
+
+**Features:**
+
+- **Memory-Driven**: Uses both users' dating memories for personalized topics
+- **ElevenLabs Voice**: Natural, expressive voice for the facilitator
+- **Real-time Audio**: LiveKit-powered voice communication
+- **Conversation Guidance**: AI suggests topics and keeps conversation flowing
+
+### 3. **Persistent Memory (mem0 Platform)**
 
 **How It Works:**
 
@@ -227,74 +241,60 @@ This takes ~30-60 seconds as it calls the mem0 API for each memory.
 2. **Transcript Capture**: Real-time capture via monkey-patched LiveKit logger
 3. **On Disconnect**: Raw transcript saved to mem0 Platform API
 4. **Automatic Extraction**: mem0's LLM extracts key information:
-   - Personal & academic profile
-   - Goals & interests
-   - Assignments & deadlines
-   - Learning preferences
-   - Challenges & support needs
-   - Achievements & progress
+   - Personal preferences & interests
+   - Dating history & experiences
+   - Relationship goals & values
+   - Conversation topics & style
+   - Emotional patterns & support needs
 5. **Context Loading**: Next session loads relevant memories automatically
 
 **Example saved memory:**
 
 ```
-Study session on 2025-01-12 14:30:
+Dating conversation on 2025-01-12 14:30:
 
-User: I'm studying biology, specifically the digestive system
-Assistant: Great! Let's start with the stomach...
-User: What about enzymes?
-Assistant: Enzymes in the stomach include pepsin...
+User: I love hiking and outdoor adventures
+Assistant: That sounds amazing! Tell me about your favorite hiking spot...
+User: I'm looking for someone who shares my passion for nature
+Assistant: Nature lovers often make great partners...
 ```
 
 mem0 extracts:
 
-- "Studying biology with focus on digestive system"
-- "Interested in enzymatic processes"
-- "Currently learning about stomach function"
+- "Passionate about hiking and outdoor adventures"
+- "Values nature and outdoor activities"
+- "Looking for partner who shares outdoor interests"
 
-### 3. **Conversation Spark**
+### 4. **User Search & Memory Viewing**
 
 **Flow:**
 
-1. User opens Spark tab
+1. User opens Search tab
 2. Frontend calls `GET /api/users` → Retrieves users from mem0 Platform
-3. User selects a study buddy (e.g., "Henry")
-4. Frontend calls `POST /api/conversation-starters` with display name
-5. Backend:
-   - Fetches all of Henry's memories from mem0
-   - Sends to Gemini with prompt to generate 5 personalized questions
-6. Display questions like:
-   - "How's your data structures project coming along?"
-   - "Need help with those recursive algorithms?"
-   - "Ready for your database exam next week?"
+3. User searches for someone (e.g., "Henry")
+4. Views Henry's dating memories and history
+5. Can start a voice date with AI facilitation
 
 **Benefits:**
 
-- Facilitates peer-to-peer study connections
-- Questions based on actual study history
-- Helps students find common interests
-
-### 4. **Study Coaching Techniques**
-
-The AI agent uses evidence-based methods:
-
-- **Active Recall**: "Try saying the formula aloud before I show it."
-- **Pomodoro**: "Let's do 20 minutes, then a 3-minute stretch."
-- **Interleaving**: "This pattern also appears in energy equations — let's link them."
-- **Acknowledgement**: "That sounds really frustrating. Anyone in your shoes would feel the same."
-- **Cognitive Reframe**: "You're not failing — you're just in the middle of learning."
+- Facilitates real connections between users
+- Memory-based conversation topics
+- Helps users find compatible matches
+- AI guidance for meaningful conversations
 
 ## 📁 Project Structure
 
 ```
-Mission-Two/
+auradate/
 ├── rn-video-calling-app/          # React Native frontend
 │   ├── app/
 │   │   ├── (tabs)/
-│   │   │   ├── index.tsx          # Call screen (language + video)
-│   │   │   ├── spark.tsx          # Conversation Spark
+│   │   │   ├── index.tsx          # Date screen (avatar selection)
+│   │   │   ├── spark.tsx          # Search users
 │   │   │   └── profile.tsx        # Profile settings
-│   │   └── call.tsx               # LiveKit video call screen
+│   │   ├── call.tsx               # LiveKit video call screen
+│   │   ├── memories.tsx           # User memories view
+│   │   └── voice-facilitator.tsx  # Voice dating facilitator
 │   ├── hooks/
 │   │   ├── useDisplayName.ts      # Persistent user identity
 │   │   └── useLanguage.ts         # Language selection
@@ -305,6 +305,7 @@ Mission-Two/
 ├── server/                         # Python backend
 │   ├── server.py                  # FastAPI REST API server
 │   ├── avatar_agent.py            # LiveKit AI agent (subprocess)
+│   ├── facilitator_agent.py       # Voice dating facilitator
 │   ├── memory_service.py          # mem0 Platform API wrapper
 │   ├── add_test_users.py          # Populate test data
 │   ├── requirements.txt
@@ -323,6 +324,13 @@ Mission-Two/
 - View active avatars: `GET /active-avatars`
 - Logs appear in main server console
 
+### Voice Facilitator Process Management
+
+- Facilitator agent launched for each voice date
+- Uses ElevenLabs TTS with custom voice ID
+- Memory-driven conversation topics
+- Automatic cleanup when date ends
+
 ### Memory Management with mem0 Platform
 
 **Add Memory:**
@@ -330,7 +338,7 @@ Mission-Two/
 ```python
 memory_service.add_conversation_turn(
     user_id="abel",
-    user_message="Study session content here",
+    user_message="Dating conversation content here",
     assistant_message=""  # Empty - mem0 only interprets user messages
 )
 ```
@@ -403,12 +411,12 @@ curl http://localhost:3001/test-tavus
 - `GET /room-info/{room_name}` - Get room status
 - `POST /cleanup-avatar/{room_name}` - Terminate avatar process
 
-### Conversation Spark
+### User Search & Memories
 
 - `GET /api/users` - List all users with memories (from mem0 Platform)
-- `POST /api/conversation-starters` - Generate personalized questions
-  - Body: `{display_name}`
-  - Returns: `{starters: [...], user_info, memory_count}`
+- `GET /api/user-memories/{username}` - Get specific user's memories
+- `POST /api/start-facilitated-conversation` - Start voice date with AI facilitator
+- `POST /api/launch-facilitator` - Launch AI facilitator agent
 
 ### Debug & Monitoring
 
@@ -426,6 +434,7 @@ curl http://localhost:3001/test-tavus
 
 - Gemini provides English-only instructions for dating conversations
 - ElevenLabs provides natural, expressive voices for romantic conversations
+- Facilitator uses custom ElevenLabs voice for guidance
 
 ## 📊 Memory System Flow
 
@@ -442,7 +451,7 @@ curl http://localhost:3001/test-tavus
 │  2. DURING CONVERSATION                                     │
 │     • User speaks → Deepgram STT → text                     │
 │     • Gemini generates response                             │
-│     • OpenAI TTS → audio → Tavus avatar                     │
+│     • ElevenLabs TTS → audio → Tavus avatar                │
 │     • Transcripts captured in buffer (_global_transcript)   │
 └─────────────────────────────────────────────────────────────┘
                           │
@@ -451,7 +460,7 @@ curl http://localhost:3001/test-tavus
 │  3. CALL END (User Disconnects)                             │
 │     • Combine all transcript segments                       │
 │     • Save raw transcript to mem0 Platform                  │
-│     • Format: "Study session on {timestamp}:\n\n{transcript}"│
+│     • Format: "Dating conversation on {timestamp}:\n\n{transcript}"│
 └─────────────────────────────────────────────────────────────┘
                           │
                           ▼
@@ -468,8 +477,8 @@ curl http://localhost:3001/test-tavus
 │  5. NEXT SESSION                                            │
 │     • Retrieve relevant memories via semantic search        │
 │     • Avatar continues conversation with context            │
-│     • "Good to see you again! Last time we were working     │
-│       on that biology assignment about enzymes..."          │
+│     • "Good to see you again! Last time we were talking     │
+│       about your love for hiking and outdoor adventures..." │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -477,22 +486,22 @@ curl http://localhost:3001/test-tavus
 
 The system automatically extracts and categorizes:
 
-1. **Personal & Academic Profile**
-   - Name, school, major, courses
-2. **Academic Goals & Interests**
-   - GPA targets, career aspirations, subject interests
-3. **Assignments & Deadlines**
-   - Upcoming projects, exams, due dates
-4. **Learning Preferences**
-   - Visual/auditory, solo/group, study environments
-5. **Extracurricular Activities**
-   - Clubs, sports, research projects
-6. **Challenges & Support Needs**
-   - Difficult subjects, motivation issues
-7. **Achievements & Progress**
-   - Awards, completed courses, new skills
-8. **Feedback & Motivation**
-   - What helps/hinders learning
+1. **Personal & Dating Profile**
+   - Name, age, location, relationship status
+2. **Dating Goals & Interests**
+   - Relationship goals, partner preferences, interests
+3. **Dating History & Experiences**
+   - Past relationships, dating stories, lessons learned
+4. **Values & Preferences**
+   - Core values, deal-breakers, must-haves
+5. **Lifestyle & Activities**
+   - Hobbies, interests, social activities
+6. **Emotional Patterns & Support Needs**
+   - Communication style, emotional needs
+7. **Achievements & Growth**
+   - Personal growth, accomplishments, goals
+8. **Feedback & Relationship Insights**
+   - What works/doesn't work in relationships
 
 ## 🚀 Deployment
 
@@ -514,13 +523,13 @@ eas build --platform ios --profile preview
 
 ## 🤝 Contributing
 
-This is a production-ready AI study companion. Key areas for enhancement:
+This is a production-ready AI dating companion. Key areas for enhancement:
 
 - Additional language support (Spanish, French, etc.)
-- Group study sessions (multi-user rooms)
-- Study analytics dashboard
-- Spaced repetition scheduling
-- Integration with learning management systems (LMS)
+- Group dating events (multi-user rooms)
+- Dating analytics dashboard
+- Compatibility matching algorithms
+- Integration with dating platforms
 
 ## 📚 Documentation
 
@@ -534,13 +543,14 @@ This is a production-ready AI study companion. Key areas for enhancement:
 - **mem0 Docs**: [https://docs.mem0.ai](https://docs.mem0.ai)
 - **LiveKit Docs**: [https://docs.livekit.io](https://docs.livekit.io)
 - **Tavus Docs**: [https://docs.tavus.io](https://docs.tavus.io)
+- **ElevenLabs Docs**: [https://docs.elevenlabs.io](https://docs.elevenlabs.io)
 
 ## 📄 License
 
-MIT License - feel free to use this for your own educational projects!
+MIT License - feel free to use this for your own dating projects!
 
 ---
 
-**Built with ❤️ for students worldwide** 🌏
+**Built with ❤️ for love and connection** 💕
 
-_Empowering learning through AI-powered conversations and persistent memory_
+_Empowering relationships through AI-powered conversations and persistent memory_

@@ -71,7 +71,7 @@ AVATAR_CONFIG = {
     'emma': {
         'replica_id': 'r6ae5b6efc9d',
         'persona_id': 'p1b06420cfdc',
-        'voice_id': 'EXAVITQu4vr4xnSDxMaL',  # Female voice - Bella
+        'voice_id': 'Xb7hH8MSUJpSbSDYk0k2',  # Female voice - Bella
         'display_name': 'Emma',
         'description': 'Sweet & Intelligent'
     }
@@ -318,17 +318,21 @@ async def entrypoint(ctx: agents.JobContext):
     print("[avatar_agent] created Tavus avatar session")
     print(f"[avatar_agent] Tavus config: avatar={avatar_name}, replica_id={avatar_config['replica_id']}, persona_id={avatar_config['persona_id']}")
     print(f"[avatar_agent] ElevenLabs TTS: voice_id={avatar_config.get('voice_id', 'default')}")
+    print(f"[avatar_agent] ElevenLabs API Key: {'✅ Set' if ELEVENLABS_API_KEY else '❌ Missing'}")
+    print(f"[avatar_agent] Tavus API Key: {'✅ Set' if TAVUS_API_KEY else '❌ Missing'}")
 
     # Start both avatar and session in parallel for faster initialization
     print(f"[avatar_agent] starting Tavus avatar and AI session in parallel for room: {room_name}")
     
     async def start_tavus_avatar():
         try:
+            print(f"[avatar_agent] Starting Tavus avatar for {avatar_name}...")
             await avatar.start(session, room=ctx.room)
             print("[avatar_agent] ✅ Tavus avatar started successfully")
             return True
         except Exception as e:
             print(f"[avatar_agent] ❌ Error starting Tavus avatar: {e}")
+            print(f"[avatar_agent] Avatar: {avatar_name}, Replica ID: {avatar_config['replica_id']}")
             import traceback
             print(f"[avatar_agent] Tavus error traceback: {traceback.format_exc()}")
             return False

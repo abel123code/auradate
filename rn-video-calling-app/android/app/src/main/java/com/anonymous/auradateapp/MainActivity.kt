@@ -1,4 +1,4 @@
-package com.anonymous.studymateapp
+package com.anonymous.auradateapp
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

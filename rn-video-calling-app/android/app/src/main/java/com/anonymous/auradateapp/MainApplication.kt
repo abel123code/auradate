@@ -1,4 +1,4 @@
-package com.anonymous.studymateapp
+package com.anonymous.auradateapp
 
 import android.app.Application
 import android.content.res.Configuration

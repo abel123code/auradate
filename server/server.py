@@ -94,8 +94,6 @@ class StartFacilitatedConversationRequest(BaseModel):
 
 class LaunchFacilitatorRequest(BaseModel):
     room_name: str
-    user1_memories: list
-    user2_memories: list
     user1: str
     user2: str
 
@@ -816,8 +814,8 @@ async def start_facilitated_conversation(request: StartFacilitatedConversationRe
         
         if memory_service:
             try:
-                user1_memories = memory_service.get_user_memories(request.user1)
-                user2_memories = memory_service.get_user_memories(request.user2)
+                user1_memories = memory_service.get_all_memories(request.user1)
+                user2_memories = memory_service.get_all_memories(request.user2)
                 print(f"[server] Fetched {len(user1_memories)} memories for {request.user1}, {len(user2_memories)} for {request.user2}")
             except Exception as e:
                 print(f"[server] Error fetching memories: {e}")
@@ -898,10 +896,30 @@ async def launch_facilitator(request: LaunchFacilitatorRequest):
     try:
         print(f"[server] Launching facilitator agent for room: {request.room_name}")
         
+        # Fetch memories for both users
+        user1_memories = []
+        user2_memories = []
+        
+        # Import memory service
+        try:
+            from memory_service import get_memory_service
+            memory_service = get_memory_service()
+            
+            if memory_service:
+                try:
+                    user1_memories = memory_service.get_all_memories(request.user1)
+                    user2_memories = memory_service.get_all_memories(request.user2)
+                    print(f"[server] Fetched {len(user1_memories)} memories for {request.user1}, {len(user2_memories)} for {request.user2}")
+                except Exception as e:
+                    print(f"[server] Error fetching memories: {e}")
+        except Exception as e:
+            print(f"[server] Memory service not available: {e}")
+        
         # Start facilitator agent process
         import subprocess
         import sys
         import os
+        import json
         
         # Get the directory of the current script
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -914,8 +932,8 @@ async def launch_facilitator(request: LaunchFacilitatorRequest):
             **os.environ,
             'USER1_NAME': request.user1,
             'USER2_NAME': request.user2,
-            'USER1_MEMORIES': str(request.user1_memories),
-            'USER2_MEMORIES': str(request.user2_memories)
+            'USER1_MEMORIES': json.dumps(user1_memories),
+            'USER2_MEMORIES': json.dumps(user2_memories)
         })
         
         # Store the process for cleanup

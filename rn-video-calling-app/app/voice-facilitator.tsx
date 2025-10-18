@@ -236,18 +236,7 @@ export default function VoiceFacilitatorScreen() {
   };
 
   const handleEndCall = () => {
-    Alert.alert(
-      'End Conversation',
-      'Are you sure you want to end this conversation?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'End', 
-          style: 'destructive',
-          onPress: () => router.back()
-        }
-      ]
-    );
+    router.back();
   };
 
   const handleMicToggle = () => {

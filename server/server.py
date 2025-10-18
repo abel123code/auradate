@@ -683,6 +683,24 @@ async def get_all_users():
 class ConversationStartersRequest(BaseModel):
     display_name: str
 
+@app.get("/api/user-memories/{username}")
+async def get_user_memories(username: str):
+    """Get all memories for a specific user"""
+    try:
+        from memory_service import get_memory_service
+        
+        memory_service = get_memory_service()
+        memories = memory_service.get_all_memories(username)
+        
+        return {
+            "username": username,
+            "memories": memories,
+            "count": len(memories) if memories else 0
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch memories: {str(e)}")
+
 @app.post("/api/conversation-starters")
 async def generate_conversation_starters(request: ConversationStartersRequest):
     """Generate conversation starter questions based on a user's memories"""

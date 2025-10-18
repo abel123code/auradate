@@ -9,9 +9,9 @@ import { request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
+import { API_BASE_URL } from '../config/api';
 
-const TOKEN_BASE = "https://3e8b6d5e0948.ngrok-free.app";   
-//const TOKEN_BASE = "https://mission-two-server.onrender.com"
+const TOKEN_BASE = API_BASE_URL;
 
 function Controls({ 
   isMicEnabled, 

@@ -1,238 +1,147 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
+  TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  RefreshControl,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useDisplayName } from '@/hooks/useDisplayName';
-
-const API_BASE_URL = 'https://mission-two-server.onrender.com';
+import { router } from 'expo-router';
+import { API_BASE_URL } from '../../config/api';
 
 interface User {
   id: string;
   display_name: string;
 }
 
-interface ConversationStarters {
-  starters: string[];
-  user_info: string;
-  memory_count?: number;
-  error?: string;
-}
-
 export default function SparkScreen() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [starters, setStarters] = useState<string[]>([]);
-  const [loadingStarters, setLoadingStarters] = useState(false);
-  const { displayName } = useDisplayName();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<User[]>([]);
+  const [searching, setSearching] = useState(false);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [displayName]);
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) {
+      Alert.alert('Error', 'Please enter a username to search');
+      return;
+    }
 
-  const fetchUsers = async () => {
+    setSearching(true);
     try {
-      setLoading(true);
       const response = await fetch(`${API_BASE_URL}/api/users`);
       const data = await response.json();
       
-      // Filter out current user
-      const otherUsers = data.users.filter((user: User) => user.display_name !== displayName);
-      setUsers(otherUsers);
+      // Filter users by search query (case-insensitive partial match)
+      const filteredUsers = data.users.filter((user: User) => 
+        user.display_name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      
+      setSearchResults(filteredUsers);
     } catch (error) {
-      console.error('Error fetching users:', error);
-      Alert.alert('Error', 'Failed to load users');
+      console.error('Error searching users:', error);
+      Alert.alert('Error', 'Failed to search users');
     } finally {
-      setLoading(false);
+      setSearching(false);
     }
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchUsers();
-    setRefreshing(false);
+  const handleUserSelect = (user: User) => {
+    router.push({
+      pathname: '/memories',
+      params: { username: user.display_name }
+    });
   };
-
-  const handleUserSelect = async (user: User) => {
-    setSelectedUser(user);
-    setStarters([]);
-    setLoadingStarters(true);
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/conversation-starters`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          display_name: user.display_name,
-        }),
-      });
-
-      const data: ConversationStarters = await response.json();
-      setStarters(data.starters);
-    } catch (error) {
-      console.error('Error fetching conversation starters:', error);
-      Alert.alert('Error', 'Failed to generate conversation starters');
-      setStarters([
-        "Hey! How's your studying going?",
-        "What subjects are you working on?",
-        "Need any study help?",
-      ]);
-    } finally {
-      setLoadingStarters(false);
-    }
-  };
-
-  const handleBack = () => {
-    setSelectedUser(null);
-    setStarters([]);
-  };
-
-  const copyToClipboard = (text: string) => {
-    Alert.alert('Copied!', text);
-  };
-
-  if (loading) {
-    return (
-      <View className="flex-1 bg-pink-50 items-center justify-center">
-        <ActivityIndicator size="large" color="#ec4899" />
-        <Text className="text-gray-600 mt-4">Loading users...</Text>
-      </View>
-    );
-  }
-
-  if (selectedUser) {
-    return (
-      <View className="flex-1 bg-pink-50">
-        <View className="p-4 border-b border-gray-800">
-          <TouchableOpacity onPress={handleBack} className="flex-row items-center mb-4">
-            <Ionicons name="arrow-back" size={24} color="#ec4899" />
-            <Text className="text-gray-800 ml-2 text-lg font-semibold">Back to Users</Text>
-          </TouchableOpacity>
-          
-          <View className="bg-white p-4 rounded-lg border border-pink-200 shadow-sm">
-            <Text className="text-xl font-bold text-gray-800 mb-1">
-              {selectedUser.display_name}
-            </Text>
-            <Text className="text-gray-600 text-sm">
-              Start a conversation with them!
-            </Text>
-          </View>
-        </View>
-
-        <ScrollView className="flex-1 p-4">
-          <Text className="text-gray-800 text-lg font-semibold mb-4">
-            💬 Conversation Starters
-          </Text>
-
-          {loadingStarters ? (
-            <View className="items-center py-8">
-              <ActivityIndicator size="large" color="#6366f1" />
-              <Text className="text-gray-600 mt-4">Generating questions...</Text>
-            </View>
-          ) : (
-            starters.map((starter, index) => (
-              <TouchableOpacity
-                key={index}
-                onPress={() => copyToClipboard(starter)}
-                className="bg-white p-4 rounded-lg mb-3 border border-pink-200 shadow-sm"
-                activeOpacity={0.7}
-              >
-                <View className="flex-row items-start">
-                  <View className="bg-pink-600 w-8 h-8 rounded-full items-center justify-center mr-3 mt-0.5">
-                    <Text className="text-white font-bold">{index + 1}</Text>
-                  </View>
-                  <Text className="text-gray-800 flex-1 text-base leading-6">
-                    {starter}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))
-          )}
-
-          <View className="bg-white p-4 rounded-lg mt-4 border border-pink-200 shadow-sm">
-            <Text className="text-gray-600 text-sm">
-              💡 Tip: These questions are personalized based on their dating history.
-              Tap any question to copy it!
-            </Text>
-          </View>
-        </ScrollView>
-      </View>
-    );
-  }
 
   return (
     <View className="flex-1 bg-pink-50">
       <View className="p-4 bg-white border-b border-pink-200 shadow-sm">
         <Text className="text-gray-800 text-lg font-semibold mb-2">
-          💕 Connect with Date Matches
+          🔍 Search Users
         </Text>
         <Text className="text-gray-600 text-sm">
-          Select a user to get personalized conversation starters for your dating experience
+          Search for users to view their memories and dating history
         </Text>
       </View>
 
-      {users.length === 0 ? (
-        <View className="flex-1 items-center justify-center p-8">
-          <Ionicons name="people-outline" size={80} color="#6b7280" />
-          <Text className="text-gray-600 text-center mt-4 text-lg">
-            No other users found yet
-          </Text>
-          <Text className="text-gray-500 text-center mt-2">
-            When other users join AuraDate, they'll appear here!
-          </Text>
+      <View className="p-4">
+        <View className="bg-white p-4 rounded-lg border border-pink-200 shadow-sm mb-4">
+          <Text className="text-gray-800 font-semibold mb-2">Username Search</Text>
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Enter username to search..."
+            className="bg-gray-50 border border-gray-300 rounded-lg px-3 py-3 text-gray-800 mb-3"
+            placeholderTextColor="#9CA3AF"
+          />
           <TouchableOpacity
-            onPress={onRefresh}
-            className="mt-6 bg-pink-600 px-6 py-3 rounded-lg"
+            onPress={handleSearch}
+            disabled={searching || !searchQuery.trim()}
+            className={`rounded-lg px-6 py-3 ${
+              searching || !searchQuery.trim() 
+                ? 'bg-gray-400' 
+                : 'bg-pink-600'
+            }`}
           >
-            <Text className="text-white font-semibold">Refresh</Text>
+            {searching ? (
+              <View className="flex-row items-center justify-center">
+                <ActivityIndicator size="small" color="white" />
+                <Text className="text-white font-semibold ml-2">Searching...</Text>
+              </View>
+            ) : (
+              <Text className="text-white font-semibold text-center">Search</Text>
+            )}
           </TouchableOpacity>
         </View>
-      ) : (
-        <ScrollView
-          className="flex-1"
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#ec4899']} />
-          }
-        >
-          <View className="p-4">
-            <Text className="text-gray-700 text-sm mb-4">
-              {users.length} {users.length === 1 ? 'user' : 'users'} available
-            </Text>
 
-            {users.map((user) => (
-              <TouchableOpacity
-                key={user.id}
-                onPress={() => handleUserSelect(user)}
-                className="bg-white p-4 rounded-lg mb-3 border border-pink-200 shadow-sm flex-row items-center"
-                activeOpacity={0.7}
-              >
-                <View className="bg-pink-600 w-12 h-12 rounded-full items-center justify-center mr-4">
-                  <Ionicons name="person" size={24} color="white" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-gray-800 font-semibold text-lg mb-1">
-                    {user.display_name}
-                  </Text>
-                  <Text className="text-gray-600 text-sm">
-                    Tap to generate conversation starters
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={24} color="#6b7280" />
-              </TouchableOpacity>
-            ))}
+        {searchResults.length > 0 && (
+          <View className="bg-white rounded-lg border border-pink-200 shadow-sm">
+            <View className="p-4 border-b border-pink-200">
+              <Text className="text-gray-800 font-semibold">
+                Search Results ({searchResults.length})
+              </Text>
+            </View>
+            <ScrollView className="max-h-64">
+              {searchResults.map((user) => (
+                <TouchableOpacity
+                  key={user.id}
+                  onPress={() => handleUserSelect(user)}
+                  className="p-4 border-b border-pink-100 flex-row items-center"
+                  activeOpacity={0.7}
+                >
+                  <View className="bg-pink-600 w-10 h-10 rounded-full items-center justify-center mr-3">
+                    <Ionicons name="person" size={20} color="white" />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-gray-800 font-semibold">
+                      {user.display_name}
+                    </Text>
+                    <Text className="text-gray-600 text-sm">
+                      View memories
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
-        </ScrollView>
-      )}
+        )}
+
+        {searchResults.length === 0 && searchQuery && !searching && (
+          <View className="bg-white p-6 rounded-lg border border-pink-200 shadow-sm">
+            <View className="items-center">
+              <Ionicons name="search-outline" size={48} color="#6b7280" />
+              <Text className="text-gray-600 text-center mt-3 text-lg">
+                No users found
+              </Text>
+              <Text className="text-gray-500 text-center mt-1">
+                Try a different username or check the spelling
+              </Text>
+            </View>
+          </View>
+        )}
+      </View>
     </View>
   );
 }

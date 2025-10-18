@@ -3,6 +3,7 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../config/api';
 
 // Configure notification behavior
 Notifications.setNotificationHandler({
@@ -150,7 +151,7 @@ export class PushNotificationService {
    */
   public async testServerConnectivity(): Promise<boolean> {
     try {
-      const API_URL = Constants.expoConfig?.extra?.apiUrl || 'https://mission-two-server.onrender.com';
+      const API_URL = Constants.expoConfig?.extra?.apiUrl || API_BASE_URL;
       console.log('🔍 Testing server connectivity:', API_URL);
       
       const response = await fetch(`${API_URL}/`, {
@@ -185,7 +186,7 @@ export class PushNotificationService {
     deviceName?: string
   ): Promise<boolean> {
     try {
-      const API_URL = Constants.expoConfig?.extra?.apiUrl || 'https://mission-two-server.onrender.com';
+      const API_URL = Constants.expoConfig?.extra?.apiUrl || API_BASE_URL;
       
       console.log('🔗 Attempting to register token with server:', API_URL);
       console.log('📱 Token:', token.substring(0, 20) + '...');

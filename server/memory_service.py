@@ -157,22 +157,40 @@ class MemoryService:
             List of all memories
         """
         try:
-            # Platform API returns list directly
-            results = self.client.get_all(user_id=user_id)
+            # Use get_all with proper filters for v2 API
+            try:
+                # Use the correct filter structure for mem0 v2 API
+                filters = {
+                    "AND": [
+                        {"user_id": user_id}
+                    ]
+                }
+                
+                results = self.client.get_all(
+                    version="v2",
+                    filters=filters,
+                    page=1,
+                    page_size=50
+                )
+            except Exception as e:
+                # Try search method as fallback
+                try:
+                    results = self.client.search(
+                        query="",  # Empty query to get all memories
+                        user_id=user_id,
+                        limit=100  # Get up to 100 memories
+                    )
+                except Exception as e2:
+                    raise e  # Re-raise original error
             
             # Handle both list and dict response formats
             if isinstance(results, dict) and 'results' in results:
                 memories = results['results']
-                print(f"[MemoryService] 📚 Retrieved {len(memories)} memories for user: {user_id}")
                 return memories
             
-            print(f"[MemoryService] 📚 Retrieved {len(results)} memories for user: {user_id}")
             return results
             
         except Exception as e:
-            print(f"[MemoryService] ❌ Error getting all memories: {e}")
-            import traceback
-            print(f"[MemoryService] Traceback: {traceback.format_exc()}")
             return []
     
     def format_memories_for_context(self, memories: List[Dict]) -> str:

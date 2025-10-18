@@ -33,11 +33,11 @@ export default function TabLayout() {
         <Tabs.Screen
           name="spark"
           options={{ 
-            title: "Spark",
+            title: "Search",
             tabBarIcon: ({ color, size}) => (
-              <Ionicons name="people" size={size} color={color} />
+              <Ionicons name="search" size={size} color={color} />
             ),
-            headerTitle: "Conversation Spark"
+            headerTitle: "Search Users"
           }}
         />
         <Tabs.Screen

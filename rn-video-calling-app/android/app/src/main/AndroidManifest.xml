@@ -34,8 +34,8 @@
         <action android:name="android.intent.action.VIEW"/>
         <category android:name="android.intent.category.DEFAULT"/>
         <category android:name="android.intent.category.BROWSABLE"/>
-        <data android:scheme="studymate"/>
-        <data android:scheme="exp+studymate"/>
+        <data android:scheme="auradate"/>
+        <data android:scheme="exp+auradate"/>
       </intent-filter>
     </activity>
   </application>

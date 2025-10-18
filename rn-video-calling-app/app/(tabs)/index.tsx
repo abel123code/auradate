@@ -38,11 +38,16 @@ export default function DateScreen() {
       <View className="flex-1 items-center justify-center px-5 py-8">
         {/* Header */}
         <View className="items-center mb-8">
-          <Text className="text-gray-800 text-3xl font-bold mb-2">
-            Choose Your Date 💕
+          <Image 
+            source={require('../../assets/images/AuraDate.png')}
+            className="w-36 h-36 rounded-full mb-6"
+            resizeMode="contain"
+          />
+          <Text className="text-gray-800 text-3xl font-bold mb-2 rounded">
+            Who's your vibe?
           </Text>
-          <Text className="text-gray-600 text-lg text-center">
-            Select an AI companion to chat with
+          <Text className="text-gray-600 text-lg text-center font-bold">
+            The ULTIMATE dating simulator
           </Text>
         </View>
 

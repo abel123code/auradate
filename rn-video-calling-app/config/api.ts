@@ -4,7 +4,7 @@
  */
 
 // Update this URL to your current server (ngrok, render, etc.)
-export const API_BASE_URL = 'https:\e957caeafc4b.ngrok-free.app';
+export const API_BASE_URL = 'https://5a50a2ca66e3.ngrok-free.app';
 
 // Alternative URLs for different environments
 export const API_URLS = {

@@ -146,6 +146,88 @@ class MemoryService:
             print(f"[MemoryService] ❌ Error adding conversation turn: {e}")
             return False
     
+    def add_social_media_context(self, user_id: str, platform: str, context_data: str) -> bool:
+        """
+        Add social media profile context to user's memories.
+        
+        Args:
+            user_id: User display name
+            platform: Social media platform name (linkedin, instagram, twitter)
+            context_data: Scraped and formatted context from the platform
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Add social media context as a system message
+            self.client.add(
+                messages=[{
+                    "role": "system",
+                    "content": f"Social Media Profile ({platform.title()}): {context_data}"
+                }],
+                user_id=user_id,
+                metadata={
+                    "timestamp": datetime.now().isoformat(),
+                    "type": "social_media_context",
+                    "platform": platform
+                }
+            )
+            
+            print(f"[MemoryService] 📱 Added {platform} context for user: {user_id}")
+            return True
+            
+        except Exception as e:
+            print(f"[MemoryService] ❌ Error adding social media context: {e}")
+            return False
+    
+    def add_user_profile_data(self, user_id: str, full_name: str, social_media_data: Dict) -> bool:
+        """
+        Add comprehensive user profile data including full name and social media insights.
+        
+        Args:
+            user_id: User display name
+            full_name: User's full name
+            social_media_data: Dictionary with scraped social media insights
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Create a comprehensive profile summary
+            profile_parts = [f"User Profile - Full Name: {full_name}"]
+            
+            if social_media_data:
+                profile_parts.append("\nSocial Media Insights:")
+                for platform, data in social_media_data.items():
+                    if data.get('success'):
+                        profile_parts.append(f"\n{platform.title()}: {data.get('data', '')}")
+            
+            profile_context = "\n".join(profile_parts)
+            
+            # Add as system message with profile metadata
+            self.client.add(
+                messages=[{
+                    "role": "system",
+                    "content": profile_context
+                }],
+                user_id=user_id,
+                metadata={
+                    "timestamp": datetime.now().isoformat(),
+                    "type": "user_profile",
+                    "full_name": full_name,
+                    "has_social_media": bool(social_media_data)
+                }
+            )
+            
+            print(f"[MemoryService] 👤 Added profile data for user: {user_id} ({full_name})")
+            return True
+            
+        except Exception as e:
+            print(f"[MemoryService] ❌ Error adding profile data: {e}")
+            import traceback
+            print(f"[MemoryService] Traceback: {traceback.format_exc()}")
+            return False
+    
     def get_all_memories(self, user_id: str) -> List[Dict]:
         """
         Get all memories for a specific user.

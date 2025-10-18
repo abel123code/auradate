@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { View, Text, TextInput, Pressable, Switch, Alert, ScrollView } from "react-native";
+import { View, Text, TextInput, Pressable, Switch, Alert, ScrollView, ActivityIndicator } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { useDisplayName } from '@/hooks/useDisplayName';
+import { API_BASE_URL } from '@/config/api';
 
 export default function ProfileScreen() {
   const { displayName, setDisplayName, isLoading } = useDisplayName();
@@ -16,6 +17,7 @@ export default function ProfileScreen() {
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [avatarEnabled, setAvatarEnabled] = useState(true);
+  const [isScraping, setIsScraping] = useState(false);
 
   // Sync local state with stored display name
   useEffect(() => {
@@ -26,8 +28,55 @@ export default function ProfileScreen() {
 
   const handleSave = async () => {
     try {
+      // First update the display name
       await setDisplayName(name);
-      Alert.alert("Profile Updated", "Your profile has been saved successfully!");
+      
+      // If LinkedIn URL, full name, or any social media fields are filled, scrape and update profile
+      const hasSocialMedia = linkedInUrl.trim() || instagramUsername.trim() || twitterUsername.trim();
+      
+      if (hasSocialMedia || (fullName.trim() && fullName !== name)) {
+        setIsScraping(true);
+        
+        try {
+          const response = await fetch(`${API_BASE_URL}/api/update-user-profile`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              display_name: name,
+              full_name: fullName || name,
+              linkedin_url: linkedInUrl.trim() || null,
+              instagram_username: instagramUsername.trim() || null,
+              twitter_username: twitterUsername.trim() || null,
+              include_facebook: true,  // Always include Facebook scraping
+            }),
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to update profile with social media data');
+          }
+          
+          const result = await response.json();
+          
+          Alert.alert(
+            "Profile Updated! 🎉", 
+            `Your profile has been saved successfully!\n\n${result.profiles_scraped > 0 
+              ? `✓ Scraped ${result.profiles_scraped} social media profile(s)\n✓ Added context to your dating AI` 
+              : 'Profile information saved'}`
+          );
+        } catch (error) {
+          console.error('Error scraping social media:', error);
+          Alert.alert(
+            "Profile Saved",
+            "Your basic profile was saved, but we couldn't scrape your social media. Please check your information and try again."
+          );
+        } finally {
+          setIsScraping(false);
+        }
+      } else {
+        Alert.alert("Profile Updated", "Your profile has been saved successfully!");
+      }
     } catch (error) {
       Alert.alert("Error", "Failed to save profile. Please try again.");
     }
@@ -101,6 +150,10 @@ export default function ProfileScreen() {
         <View className="mb-6">
           <Text className="text-gray-800 text-lg font-semibold mb-4">Social Media</Text>
           
+          <Text className="text-gray-600 text-sm mb-4">
+            Add your LinkedIn URL to get professional context. We'll also find your Facebook using your full name!
+          </Text>
+
           <View className="mb-4">
             <Text className="text-gray-700 mb-2">LinkedIn URL</Text>
             <TextInput
@@ -204,10 +257,33 @@ export default function ProfileScreen() {
         {/* Save Button */}
         <Pressable
           onPress={handleSave}
-          className="bg-pink-600 rounded-2xl px-5 py-4 items-center mb-6"
+          disabled={isScraping}
+          className={`rounded-2xl px-5 py-4 items-center mb-6 ${isScraping ? 'bg-pink-400' : 'bg-pink-600'}`}
         >
-          <Text className="text-white text-base font-medium">Save Profile</Text>
+          {isScraping ? (
+            <View className="flex-row items-center">
+              <ActivityIndicator color="white" size="small" />
+              <Text className="text-white text-base font-medium ml-2">Updating Profile...</Text>
+            </View>
+          ) : (
+            <Text className="text-white text-base font-medium">Save Profile</Text>
+          )}
         </Pressable>
+
+        {/* Info about social media scraping */}
+        {(linkedInUrl.trim() || fullName.trim() || instagramUsername.trim() || twitterUsername.trim()) && (
+          <View className="bg-pink-100 rounded-xl p-4 mb-6">
+            <View className="flex-row items-start">
+              <Ionicons name="information-circle" size={20} color="#db2777" />
+              <View className="flex-1 ml-2">
+                <Text className="text-pink-900 text-sm font-medium mb-1">Social Media Context</Text>
+                <Text className="text-pink-800 text-xs">
+                  We'll crawl your LinkedIn profile with advanced web scraping, find your Facebook using your full name, and analyze your Instagram and Twitter accounts to help the AI understand your interests and create better conversation starters for your dates!
+                </Text>
+              </View>
+            </View>
+          </View>
+        )}
 
         {/* App Info */}
         <View className="items-center">

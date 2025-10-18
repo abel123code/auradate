@@ -15,6 +15,10 @@ from typing import Optional
 # LiveKit Python server SDK
 from livekit import api  # pip install livekit-api
 
+# Import our services
+from memory_service import get_memory_service
+from social_media_scraper import get_social_media_scraper
+
 load_dotenv()
 
 LIVEKIT_URL = os.getenv("LIVEKIT_URL")  # not strictly needed for token; handy to expose to FE if you want
@@ -93,6 +97,14 @@ class CallResponse(BaseModel):
     caller_name: str
     status: str
     created_at: str
+
+class UpdateUserProfileRequest(BaseModel):
+    display_name: str
+    full_name: Optional[str] = None
+    linkedin_url: Optional[str] = None  # LinkedIn URL for Exa crawling
+    instagram_username: Optional[str] = None
+    twitter_username: Optional[str] = None
+    include_facebook: bool = True  # Whether to scrape Facebook
 
 class RegisterTokenRequest(BaseModel):
     expo_push_token: str
@@ -783,6 +795,115 @@ Example: ["How's your photosynthesis revision going?", "Need help with that alge
             "user_info": display_name,
             "error": "Using fallback questions"
         }
+
+@app.post("/api/update-user-profile")
+async def update_user_profile(request: UpdateUserProfileRequest):
+    """
+    Update user profile with full name and social media handles.
+    Scrapes social media profiles (LinkedIn, Facebook, Instagram, Twitter) and adds context to mem0 memories.
+    """
+    try:
+        display_name = request.display_name
+        full_name = request.full_name or display_name
+        
+        print(f"[API] 👤 Updating profile for user: {display_name}")
+        print(f"[API] Full name: {full_name}")
+        print(f"[API] LinkedIn URL: {request.linkedin_url or 'Not provided'}")
+        print(f"[API] Instagram: {request.instagram_username or 'Not provided'}")
+        print(f"[API] Twitter: {request.twitter_username or 'Not provided'}")
+        print(f"[API] Include Facebook: {request.include_facebook}")
+        
+        # Initialize services
+        memory_service = get_memory_service()
+        scraper = get_social_media_scraper()
+        
+        # Scrape social media profiles
+        social_media_results = {}
+        
+        # Scrape LinkedIn using URL (Exa will crawl it, Interfaze will format)
+        if request.linkedin_url and request.linkedin_url.strip():
+            print(f"[API] 🔍 Scraping LinkedIn profile using Exa + Interfaze...")
+            linkedin_result = scraper.scrape_linkedin(request.linkedin_url)
+            social_media_results['linkedin'] = linkedin_result
+            
+            if linkedin_result.get('success'):
+                # Add to memory
+                memory_service.add_social_media_context(
+                    user_id=display_name,
+                    platform='linkedin',
+                    context_data=linkedin_result.get('data', '')
+                )
+        
+        # Scrape Facebook using full name
+        if full_name and full_name.strip() and full_name != display_name and request.include_facebook:
+            print(f"[API] 🔍 Scraping Facebook profile using full name...")
+            facebook_result = scraper.scrape_facebook(full_name)
+            social_media_results['facebook'] = facebook_result
+            
+            if facebook_result.get('success'):
+                # Add to memory
+                memory_service.add_social_media_context(
+                    user_id=display_name,
+                    platform='facebook',
+                    context_data=facebook_result.get('data', '')
+                )
+        
+        if request.instagram_username:
+            print(f"[API] 🔍 Scraping Instagram profile...")
+            instagram_result = scraper.scrape_instagram(request.instagram_username)
+            social_media_results['instagram'] = instagram_result
+            
+            if instagram_result.get('success'):
+                # Add to memory
+                memory_service.add_social_media_context(
+                    user_id=display_name,
+                    platform='instagram',
+                    context_data=instagram_result.get('data', '')
+                )
+        
+        if request.twitter_username:
+            print(f"[API] 🔍 Scraping Twitter/X profile...")
+            twitter_result = scraper.scrape_twitter(request.twitter_username)
+            social_media_results['twitter'] = twitter_result
+            
+            if twitter_result.get('success'):
+                # Add to memory
+                memory_service.add_social_media_context(
+                    user_id=display_name,
+                    platform='twitter',
+                    context_data=twitter_result.get('data', '')
+                )
+        
+        # Add comprehensive profile data to memory
+        memory_service.add_user_profile_data(
+            user_id=display_name,
+            full_name=full_name,
+            social_media_data=social_media_results
+        )
+        
+        # Count successful scrapes
+        successful_scrapes = sum(1 for r in social_media_results.values() if r.get('success'))
+        
+        print(f"[API] ✅ Profile update complete: {successful_scrapes} social media profiles scraped")
+        
+        return {
+            "success": True,
+            "message": f"Profile updated successfully. Scraped {successful_scrapes} social media profiles.",
+            "display_name": display_name,
+            "full_name": full_name,
+            "social_media_results": social_media_results,
+            "profiles_scraped": successful_scrapes
+        }
+        
+    except Exception as e:
+        print(f"[API] ❌ Error updating user profile: {e}")
+        import traceback
+        print(traceback.format_exc())
+        
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to update profile: {str(e)}"
+        )
 
 if __name__ == "__main__":
     import uvicorn

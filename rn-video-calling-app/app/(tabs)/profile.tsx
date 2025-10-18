@@ -49,7 +49,6 @@ export default function ProfileScreen() {
               linkedin_url: linkedInUrl.trim() || null,
               instagram_username: instagramUsername.trim() || null,
               twitter_username: twitterUsername.trim() || null,
-              include_facebook: true,  // Always include Facebook scraping
             }),
           });
           
@@ -151,7 +150,7 @@ export default function ProfileScreen() {
           <Text className="text-gray-800 text-lg font-semibold mb-4">Social Media</Text>
           
           <Text className="text-gray-600 text-sm mb-4">
-            Add your LinkedIn URL to get professional context. We'll also find your Facebook using your full name!
+            Add your social media profiles to help the AI create personalized conversation starters!
           </Text>
 
           <View className="mb-4">
@@ -278,7 +277,7 @@ export default function ProfileScreen() {
               <View className="flex-1 ml-2">
                 <Text className="text-pink-900 text-sm font-medium mb-1">Social Media Context</Text>
                 <Text className="text-pink-800 text-xs">
-                  We'll crawl your LinkedIn profile with advanced web scraping, find your Facebook using your full name, and analyze your Instagram and Twitter accounts to help the AI understand your interests and create better conversation starters for your dates!
+                  We'll use advanced web scraping to analyze your LinkedIn, Instagram, and Twitter profiles to help the AI understand your interests and create better conversation starters for your dates!
                 </Text>
               </View>
             </View>

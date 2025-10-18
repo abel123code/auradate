@@ -52,24 +52,6 @@ class TwitterProfile(BaseModel):
     hobbies: List[str]
     personality_traits: List[str]
 
-class FacebookProfile(BaseModel):
-    """Schema for Facebook profile data extraction"""
-    full_name: str
-    bio: str
-    location: Optional[str] = None
-    work: List[str]
-    education: List[str]
-    relationship_status: Optional[str] = None
-    interests_and_hobbies: List[str]
-    favorite_quotes: Optional[str] = None
-    music_preferences: List[str]
-    movie_preferences: List[str]
-    book_preferences: List[str]
-    activities_and_groups: List[str]
-    life_events: List[str]
-    personality_traits: List[str]
-    friends_count: Optional[str] = None
-
 class SocialMediaScraper:
     """
     Scrapes social media profiles using Interfaze API to gather contextual information
@@ -218,28 +200,49 @@ class SocialMediaScraper:
         
         return '. '.join(parts) + '.'
     
-    def scrape_instagram(self, instagram_username: str) -> Dict[str, any]:
+    def scrape_instagram(self, username: str) -> Dict[str, any]:
         """
-        Scrape Instagram profile for lifestyle, interests, and personality.
+        Scrape Instagram profile for lifestyle, interests, and visual content.
+        Uses Exa to crawl Instagram profile, then Interfaze to format data.
         
         Args:
-            instagram_username: Instagram username (with or without @)
+            username: Instagram username (with or without @ prefix)
             
         Returns:
             Dictionary with scraped Instagram data
         """
-        if not instagram_username or not instagram_username.strip():
+        if not username or not username.strip():
             return {"error": "No Instagram username provided"}
         
-        # Normalize username
-        username = instagram_username.strip().lstrip('@')
-        instagram_url = f"https://instagram.com/{username}"
-        
         try:
-            print(f"[SocialMediaScraper] 🔍 Scraping Instagram: @{username}")
+            # Clean username and derive URL
+            clean_username = username.strip().lstrip('@')
+            instagram_url = f"https://instagram.com/{clean_username}"
             
-            # Use schema-based extraction
-            prompt = f"Extract the profile information from this Instagram account: {instagram_url}"
+            print(f"[SocialMediaScraper] 🔍 Scraping Instagram for @{clean_username}")
+            print(f"[SocialMediaScraper] 📍 Crawling URL: {instagram_url}")
+            
+            # Step 1: Use Exa to crawl the Instagram profile
+            exa_result = self.exa.get_contents(
+                ids=[instagram_url],
+                text=True
+            )
+            
+            if not exa_result.results or not exa_result.results[0].text:
+                print(f"[SocialMediaScraper] ⚠️ No content retrieved from Instagram")
+                return {
+                    "platform": "instagram",
+                    "username": clean_username,
+                    "error": "Could not retrieve Instagram content",
+                    "success": False
+                }
+            
+            # Get the crawled content
+            crawled_content = exa_result.results[0].text
+            print(f"[SocialMediaScraper] 📄 Retrieved {len(crawled_content)} characters of content")
+            
+            # Step 2: Use Interfaze to format the crawled content with schema
+            prompt = f"Extract the Instagram profile information from the following content:\n\n{crawled_content[:4000]}"
             
             response = self.client.chat.completions.create(
                 model="interfaze-beta",
@@ -261,12 +264,11 @@ class SocialMediaScraper:
             # Format into conversational summary
             summary = self._format_instagram_summary(profile_data)
             
-            print(f"[SocialMediaScraper] ✅ Instagram data scraped successfully")
+            print(f"[SocialMediaScraper] ✅ Instagram data scraped successfully for @{clean_username}")
             
             return {
                 "platform": "instagram",
-                "username": username,
-                "url": instagram_url,
+                "username": clean_username,
                 "data": summary,
                 "structured_data": profile_data,
                 "success": True
@@ -323,6 +325,7 @@ class SocialMediaScraper:
     def scrape_twitter(self, twitter_username: str) -> Dict[str, any]:
         """
         Scrape Twitter/X profile for opinions, interests, and conversation style.
+        Uses Exa to crawl Twitter profile, then Interfaze to format data.
         
         Args:
             twitter_username: Twitter/X username (with or without @)
@@ -333,15 +336,33 @@ class SocialMediaScraper:
         if not twitter_username or not twitter_username.strip():
             return {"error": "No Twitter username provided"}
         
-        # Normalize username
+        # Normalize username and derive URL
         username = twitter_username.strip().lstrip('@')
         twitter_url = f"https://x.com/{username}"
         
         try:
             print(f"[SocialMediaScraper] 🔍 Scraping Twitter/X: @{username}")
+            print(f"[SocialMediaScraper] 📍 Crawling URL: {twitter_url}")
             
-            # Use schema-based extraction
-            prompt = f"Extract the profile information from this Twitter/X account: {twitter_url}"
+            # Step 1: Use Exa to crawl the Twitter profile
+            exa_result = self.exa.get_contents([twitter_url])
+            
+            if not exa_result.results or not exa_result.results[0].text:
+                print(f"[SocialMediaScraper] ⚠️ No content retrieved from Twitter")
+                return {
+                    "platform": "twitter",
+                    "username": username,
+                    "url": twitter_url,
+                    "error": "Could not retrieve Twitter content",
+                    "success": False
+                }
+            
+            # Get the crawled content
+            crawled_content = exa_result.results[0].text
+            print(f"[SocialMediaScraper] 📄 Retrieved {len(crawled_content)} characters of content")
+            
+            # Step 2: Use Interfaze to format the crawled content with schema
+            prompt = f"Extract the Twitter/X profile information from the following content:\n\n{crawled_content[:4000]}"
             
             response = self.client.chat.completions.create(
                 model="interfaze-beta",
@@ -426,140 +447,19 @@ class SocialMediaScraper:
         
         return '. '.join(parts) + '.'
     
-    def scrape_facebook(self, full_name: str) -> Dict[str, any]:
-        """
-        Scrape Facebook profile for interests, life events, and social context using full name.
-        
-        Args:
-            full_name: User's full name (e.g., "John Doe")
-            
-        Returns:
-            Dictionary with scraped Facebook data
-        """
-        if not full_name or not full_name.strip():
-            return {"error": "No full name provided"}
-        
-        try:
-            print(f"[SocialMediaScraper] 🔍 Scraping Facebook for: {full_name}")
-            
-            # Use schema-based extraction with full name
-            prompt = f"Find and extract the profile information from {full_name}'s Facebook account"
-            
-            response = self.client.chat.completions.create(
-                model="interfaze-beta",
-                messages=[{"role": "user", "content": prompt}],
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": "facebook_profile",
-                        "schema": FacebookProfile.model_json_schema(),
-                        "strict": True
-                    }
-                }
-            )
-            
-            # Parse the structured response
-            content = response.choices[0].message.content
-            profile_data = json.loads(content)
-            
-            # Format into conversational summary
-            summary = self._format_facebook_summary(profile_data)
-            
-            print(f"[SocialMediaScraper] ✅ Facebook data scraped successfully for {full_name}")
-            
-            return {
-                "platform": "facebook",
-                "full_name": full_name,
-                "data": summary,
-                "structured_data": profile_data,
-                "success": True
-            }
-            
-        except Exception as e:
-            print(f"[SocialMediaScraper] ❌ Error scraping Facebook: {e}")
-            import traceback
-            print(f"[SocialMediaScraper] Traceback: {traceback.format_exc()}")
-            return {
-                "platform": "facebook",
-                "full_name": full_name,
-                "error": str(e),
-                "success": False
-            }
-    
-    def _format_facebook_summary(self, data: Dict) -> str:
-        """Format Facebook structured data into conversational summary"""
-        parts = []
-        
-        if data.get('full_name'):
-            parts.append(f"Name: {data['full_name']}")
-        
-        if data.get('bio'):
-            parts.append(f"Bio: {data['bio']}")
-        
-        if data.get('location'):
-            parts.append(f"Location: {data['location']}")
-        
-        if data.get('work'):
-            work = ', '.join(data['work'][:3])
-            parts.append(f"Work: {work}")
-        
-        if data.get('education'):
-            edu = ', '.join(data['education'])
-            parts.append(f"Education: {edu}")
-        
-        if data.get('relationship_status'):
-            parts.append(f"Relationship: {data['relationship_status']}")
-        
-        if data.get('interests_and_hobbies'):
-            interests = ', '.join(data['interests_and_hobbies'])
-            parts.append(f"Interests: {interests}")
-        
-        if data.get('music_preferences'):
-            music = ', '.join(data['music_preferences'][:5])
-            parts.append(f"Music: {music}")
-        
-        if data.get('movie_preferences'):
-            movies = ', '.join(data['movie_preferences'][:5])
-            parts.append(f"Movies: {movies}")
-        
-        if data.get('book_preferences'):
-            books = ', '.join(data['book_preferences'][:5])
-            parts.append(f"Books: {books}")
-        
-        if data.get('activities_and_groups'):
-            activities = ', '.join(data['activities_and_groups'][:5])
-            parts.append(f"Activities/Groups: {activities}")
-        
-        if data.get('life_events'):
-            events = ', '.join(data['life_events'][:5])
-            parts.append(f"Life events: {events}")
-        
-        if data.get('personality_traits'):
-            traits = ', '.join(data['personality_traits'])
-            parts.append(f"Personality: {traits}")
-        
-        if data.get('favorite_quotes'):
-            parts.append(f"Favorite quote: {data['favorite_quotes']}")
-        
-        return '. '.join(parts) + '.'
-    
     def scrape_all_profiles(
         self,
         linkedin_url: Optional[str] = None,
-        full_name: Optional[str] = None,
         instagram_username: Optional[str] = None,
-        twitter_username: Optional[str] = None,
-        include_facebook: bool = True
+        twitter_username: Optional[str] = None
     ) -> List[Dict]:
         """
         Scrape all provided social media profiles.
         
         Args:
             linkedin_url: LinkedIn profile URL
-            full_name: User's full name (used for Facebook)
             instagram_username: Instagram username
             twitter_username: Twitter/X username
-            include_facebook: Whether to scrape Facebook (default: True)
             
         Returns:
             List of scraping results for each platform
@@ -569,11 +469,6 @@ class SocialMediaScraper:
         if linkedin_url and linkedin_url.strip():
             # Scrape LinkedIn using URL (with Exa crawling)
             results.append(self.scrape_linkedin(linkedin_url))
-        
-        if full_name and full_name.strip():
-            # Scrape Facebook using full name
-            if include_facebook:
-                results.append(self.scrape_facebook(full_name))
         
         if instagram_username and instagram_username.strip():
             results.append(self.scrape_instagram(instagram_username))

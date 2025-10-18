@@ -104,7 +104,6 @@ class UpdateUserProfileRequest(BaseModel):
     linkedin_url: Optional[str] = None  # LinkedIn URL for Exa crawling
     instagram_username: Optional[str] = None
     twitter_username: Optional[str] = None
-    include_facebook: bool = True  # Whether to scrape Facebook
 
 class RegisterTokenRequest(BaseModel):
     expo_push_token: str
@@ -800,7 +799,7 @@ Example: ["How's your photosynthesis revision going?", "Need help with that alge
 async def update_user_profile(request: UpdateUserProfileRequest):
     """
     Update user profile with full name and social media handles.
-    Scrapes social media profiles (LinkedIn, Facebook, Instagram, Twitter) and adds context to mem0 memories.
+    Scrapes social media profiles (LinkedIn, Instagram, Twitter) and adds context to mem0 memories.
     """
     try:
         display_name = request.display_name
@@ -811,7 +810,6 @@ async def update_user_profile(request: UpdateUserProfileRequest):
         print(f"[API] LinkedIn URL: {request.linkedin_url or 'Not provided'}")
         print(f"[API] Instagram: {request.instagram_username or 'Not provided'}")
         print(f"[API] Twitter: {request.twitter_username or 'Not provided'}")
-        print(f"[API] Include Facebook: {request.include_facebook}")
         
         # Initialize services
         memory_service = get_memory_service()
@@ -834,22 +832,8 @@ async def update_user_profile(request: UpdateUserProfileRequest):
                     context_data=linkedin_result.get('data', '')
                 )
         
-        # Scrape Facebook using full name
-        if full_name and full_name.strip() and full_name != display_name and request.include_facebook:
-            print(f"[API] 🔍 Scraping Facebook profile using full name...")
-            facebook_result = scraper.scrape_facebook(full_name)
-            social_media_results['facebook'] = facebook_result
-            
-            if facebook_result.get('success'):
-                # Add to memory
-                memory_service.add_social_media_context(
-                    user_id=display_name,
-                    platform='facebook',
-                    context_data=facebook_result.get('data', '')
-                )
-        
         if request.instagram_username:
-            print(f"[API] 🔍 Scraping Instagram profile...")
+            print(f"[API] 🔍 Scraping Instagram profile using Exa + Interfaze...")
             instagram_result = scraper.scrape_instagram(request.instagram_username)
             social_media_results['instagram'] = instagram_result
             
@@ -862,7 +846,7 @@ async def update_user_profile(request: UpdateUserProfileRequest):
                 )
         
         if request.twitter_username:
-            print(f"[API] 🔍 Scraping Twitter/X profile...")
+            print(f"[API] 🔍 Scraping Twitter/X profile using Exa + Interfaze...")
             twitter_result = scraper.scrape_twitter(request.twitter_username)
             social_media_results['twitter'] = twitter_result
             
@@ -873,6 +857,7 @@ async def update_user_profile(request: UpdateUserProfileRequest):
                     platform='twitter',
                     context_data=twitter_result.get('data', '')
                 )
+                print("AOSUDHKJASBDKJAS", twitter_result)
         
         # Add comprehensive profile data to memory
         memory_service.add_user_profile_data(

@@ -6,6 +6,10 @@ import { useDisplayName } from '@/hooks/useDisplayName';
 export default function ProfileScreen() {
   const { displayName, setDisplayName, isLoading } = useDisplayName();
   const [name, setName] = useState(displayName);
+  const [fullName, setFullName] = useState("");
+  const [linkedInUrl, setLinkedInUrl] = useState("");
+  const [instagramUsername, setInstagramUsername] = useState("");
+  const [twitterUsername, setTwitterUsername] = useState("");
   const [email, setEmail] = useState("abel@example.com");
   const [bio, setBio] = useState("AI Study Assistant");
   const [notifications, setNotifications] = useState(true);
@@ -57,6 +61,17 @@ export default function ProfileScreen() {
           </View>
 
           <View className="mb-4">
+            <Text className="text-gray-700 mb-2">Full Name</Text>
+            <TextInput
+              value={fullName}
+              onChangeText={setFullName}
+              placeholder="Enter your full name"
+              placeholderTextColor="#6b7280"
+              className="border border-gray-300 rounded-xl px-4 py-3 text-gray-800 bg-white"
+            />
+          </View>
+
+          <View className="mb-4">
             <Text className="text-gray-700 mb-2">Email</Text>
             <TextInput
               value={email}
@@ -78,6 +93,48 @@ export default function ProfileScreen() {
               className="border border-gray-300 rounded-xl px-4 py-3 text-gray-800 bg-white"
               multiline
               numberOfLines={3}
+            />
+          </View>
+        </View>
+
+        {/* Social Media */}
+        <View className="mb-6">
+          <Text className="text-gray-800 text-lg font-semibold mb-4">Social Media</Text>
+          
+          <View className="mb-4">
+            <Text className="text-gray-700 mb-2">LinkedIn URL</Text>
+            <TextInput
+              value={linkedInUrl}
+              onChangeText={setLinkedInUrl}
+              placeholder="https://linkedin.com/in/username"
+              placeholderTextColor="#6b7280"
+              className="border border-gray-300 rounded-xl px-4 py-3 text-gray-800 bg-white"
+              keyboardType="url"
+              autoCapitalize="none"
+            />
+          </View>
+
+          <View className="mb-4">
+            <Text className="text-gray-700 mb-2">Instagram Username</Text>
+            <TextInput
+              value={instagramUsername}
+              onChangeText={setInstagramUsername}
+              placeholder="@username"
+              placeholderTextColor="#6b7280"
+              className="border border-gray-300 rounded-xl px-4 py-3 text-gray-800 bg-white"
+              autoCapitalize="none"
+            />
+          </View>
+
+          <View className="mb-4">
+            <Text className="text-gray-700 mb-2">Twitter/X Username</Text>
+            <TextInput
+              value={twitterUsername}
+              onChangeText={setTwitterUsername}
+              placeholder="@username"
+              placeholderTextColor="#6b7280"
+              className="border border-gray-300 rounded-xl px-4 py-3 text-gray-800 bg-white"
+              autoCapitalize="none"
             />
           </View>
         </View>

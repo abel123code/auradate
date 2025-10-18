@@ -9,6 +9,7 @@ export default {
     userInterfaceStyle: "automatic",
     newArchEnabled: false,
     ios: {
+      bundleIdentifier: "com.anonymous.auradateapp",
       supportsTablet: true,
       infoPlist: {
         NSCameraUsageDescription: "This app uses the camera for video calls.",

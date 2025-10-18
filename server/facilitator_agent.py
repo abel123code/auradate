@@ -129,7 +129,6 @@ async def entrypoint(ctx: JobContext):
 
     Start by warmly welcoming them and presenting a modified question that connects to their memories, aiming to kickstart a meaningful discussion.
     """
-    print('System prompt!!!: ', system_prompt)
     
     # Create the agent with instructions
     agent = Agent(
@@ -142,7 +141,7 @@ async def entrypoint(ctx: JobContext):
         stt=deepgram.STT(model="nova-3", language="en-US"),
         tts=elevenlabs.TTS(
             api_key=ELEVENLABS_API_KEY,
-            voice_id="ODq5zmih8GrVes37Dizd",  # Professional narrator voice
+            voice_id="EXAVITQu4vr4xnSDxMaL",  # Professional narrator voice
             model="eleven_multilingual_v2"
         ),
     )

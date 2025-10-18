@@ -110,6 +110,16 @@ export default function RootLayout() {
             headerBackTitleVisible: false
           }} 
         />
+        <Stack.Screen 
+          name="memories" 
+          options={{ 
+            headerShown: true,
+            headerTitle: "Memories",
+            headerStyle: { backgroundColor: "#fce7f3" },
+            headerTintColor: "#374151",
+            headerBackTitleVisible: false
+          }} 
+        />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />

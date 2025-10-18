@@ -145,7 +145,6 @@ class SocialMediaScraper:
             
             # Format into conversational summary
             summary = self._format_linkedin_summary(profile_data)
-            print("SUMMARYASJDNAKSD",summary)
             
             print(f"[SocialMediaScraper] ✅ LinkedIn data formatted successfully")
             
@@ -578,7 +577,6 @@ Create a natural, conversational summary that would help someone understand who 
                     )
                     
                     ai_summary = response.choices[0].message.content
-                    print("SAJDHIJSAHDKJSAND", ai_summary)
                 except Exception as e:
                     print(f"[SocialMediaScraper] ⚠️ AI summary generation failed: {e}")
                     ai_summary = "Summary generation failed"

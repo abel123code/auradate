@@ -223,10 +223,7 @@ class SocialMediaScraper:
             print(f"[SocialMediaScraper] 📍 Crawling URL: {instagram_url}")
             
             # Step 1: Use Exa to crawl the Instagram profile
-            exa_result = self.exa.get_contents(
-                ids=[instagram_url],
-                text=True
-            )
+            exa_result = self.exa.get_contents([instagram_url])
             
             if not exa_result.results or not exa_result.results[0].text:
                 print(f"[SocialMediaScraper] ⚠️ No content retrieved from Instagram")
@@ -406,6 +403,214 @@ class SocialMediaScraper:
                 "success": False
             }
     
+    def search_web_for_user(
+        self,
+        full_name: str,
+        username: Optional[str] = None,
+        additional_context: Optional[str] = None,
+        num_results: int = 10
+    ) -> Dict[str, any]:
+        """
+        Use Exa's web search to find as much information as possible about the user.
+        Searches across multiple query variations and crawls all found websites.
+        
+        Args:
+            full_name: User's full name
+            username: Optional username for additional context
+            additional_context: Optional additional context (e.g., company, location)
+            num_results: Number of results to retrieve per search query
+            
+        Returns:
+            Dictionary with aggregated web search results and crawled content
+        """
+        try:
+            print(f"[SocialMediaScraper] 🔍 Performing comprehensive web search for: {full_name}")
+            
+            # Build multiple search queries to maximize coverage
+            search_queries = [
+                f'"{full_name}" profile about bio',
+                f'"{full_name}" professional background experience',
+                f'"{full_name}" personal interests hobbies',
+            ]
+            
+            if username:
+                search_queries.append(f'"{full_name}" @{username} social media')
+                search_queries.append(f'{username} profile')
+            
+            if additional_context:
+                search_queries.append(f'"{full_name}" {additional_context}')
+            
+            # Categories to search with specific focus
+            focused_searches = [
+                (f'"{full_name}" LinkedIn', 'linkedin profile'),
+                (f'"{full_name}" professional', 'personal site'),
+                (f'"{full_name}" about me', 'personal site'),
+            ]
+            
+            all_urls = set()  # Use set to avoid duplicates
+            search_results = []
+            
+            # Perform standard searches
+            for query in search_queries:
+                try:
+                    print(f"[SocialMediaScraper]   🔎 Searching: {query}")
+                    result = self.exa.search(
+                        query=query,
+                        type="auto",  # Use auto to intelligently choose neural or keyword
+                        num_results=num_results,
+                        use_autoprompt=True  # Let Exa optimize the query
+                    )
+                    
+                    for item in result.results:
+                        all_urls.add(item.url)
+                        search_results.append({
+                            'url': item.url,
+                            'title': item.title,
+                            'query': query,
+                            'score': item.score if hasattr(item, 'score') else None
+                        })
+                    
+                    print(f"[SocialMediaScraper]   ✓ Found {len(result.results)} results")
+                    
+                except Exception as e:
+                    print(f"[SocialMediaScraper]   ⚠️ Search failed for '{query}': {e}")
+                    continue
+            
+            # Perform category-focused searches
+            for query, category in focused_searches:
+                try:
+                    print(f"[SocialMediaScraper]   🔎 Searching with category '{category}': {query}")
+                    result = self.exa.search(
+                        query=query,
+                        type="auto",
+                        category=category,
+                        num_results=min(5, num_results),  # Fewer results for focused searches
+                        use_autoprompt=True
+                    )
+                    
+                    for item in result.results:
+                        all_urls.add(item.url)
+                        search_results.append({
+                            'url': item.url,
+                            'title': item.title,
+                            'query': query,
+                            'category': category,
+                            'score': item.score if hasattr(item, 'score') else None
+                        })
+                    
+                    print(f"[SocialMediaScraper]   ✓ Found {len(result.results)} results")
+                    
+                except Exception as e:
+                    print(f"[SocialMediaScraper]   ⚠️ Category search failed: {e}")
+                    continue
+            
+            # Now crawl all unique URLs found
+            print(f"[SocialMediaScraper] 📄 Found {len(all_urls)} unique URLs, crawling content...")
+            
+            crawled_data = []
+            urls_list = list(all_urls)[:20]  # Limit to top 20 to manage API costs
+            
+            if urls_list:
+                try:
+                    # Batch crawl all URLs
+                    contents_result = self.exa.get_contents([urls_list])
+                    
+                    for item in contents_result.results:
+                        crawled_data.append({
+                            'url': item.url,
+                            'title': item.title,
+                            'text': item.text[:3000] if item.text else None,  # Limit text length
+                            'summary': item.summary if hasattr(item, 'summary') else None,
+                            'author': item.author if hasattr(item, 'author') else None,
+                            'published_date': item.published_date if hasattr(item, 'published_date') else None
+                        })
+                    
+                    print(f"[SocialMediaScraper] ✅ Successfully crawled {len(crawled_data)} pages")
+                    
+                except Exception as e:
+                    print(f"[SocialMediaScraper] ⚠️ Batch crawl error: {e}")
+                    # Try individual crawling as fallback
+                    for url in urls_list[:10]:  # Limit fallback to 10 URLs
+                        try:
+                            result = self.exa.get_contents([url])
+                            if result.results and result.results[0].text:
+                                crawled_data.append({
+                                    'url': url,
+                                    'title': result.results[0].title,
+                                    'text': result.results[0].text[:3000],
+                                    'author': result.results[0].author if hasattr(result.results[0], 'author') else None
+                                })
+                        except Exception as inner_e:
+                            print(f"[SocialMediaScraper]   ⚠️ Failed to crawl {url}: {inner_e}")
+                            continue
+            
+            # Format aggregated summary using Interfaze
+            if crawled_data:
+                print(f"[SocialMediaScraper] 🤖 Creating AI summary from {len(crawled_data)} sources...")
+                
+                # Combine all text content
+                combined_text = "\n\n".join([
+                    f"Source: {item['title']} ({item['url']})\n{item.get('summary', item.get('text', ''))[:1500]}"
+                    for item in crawled_data[:10]  # Use top 10 sources
+                ])
+                
+                # Use Interfaze to create a structured summary
+                summary_prompt = f"""Analyze the following information about {full_name} and create a comprehensive personal profile summary.
+                
+Focus on extracting:
+- Professional background and current role
+- Skills and expertise
+- Personal interests and hobbies
+- Personality traits and communication style
+- Notable achievements or activities
+- Any other relevant personal information
+
+Information from web sources:
+{combined_text[:5000]}
+
+Create a natural, conversational summary that would help someone understand who this person is."""
+
+                try:
+                    
+                    response = self.client.chat.completions.create(
+                        model="interfaze-beta",
+                        messages=[{"role": "user", "content": summary_prompt}]
+                    )
+                    
+                    ai_summary = response.choices[0].message.content
+                    print("SAJDHIJSAHDKJSAND", ai_summary)
+                except Exception as e:
+                    print(f"[SocialMediaScraper] ⚠️ AI summary generation failed: {e}")
+                    ai_summary = "Summary generation failed"
+            else:
+                ai_summary = "No content could be retrieved"
+            
+            print(f"[SocialMediaScraper] ✅ Web search completed for {full_name}")
+            
+            return {
+                "platform": "web_search",
+                "full_name": full_name,
+                "queries_executed": len(search_queries) + len(focused_searches),
+                "urls_found": len(all_urls),
+                "pages_crawled": len(crawled_data),
+                "search_results": search_results[:20],  # Return top 20 search results
+                "crawled_content": crawled_data,
+                "ai_summary": ai_summary,
+                "data": ai_summary,  # For consistency with other methods
+                "success": True
+            }
+            
+        except Exception as e:
+            print(f"[SocialMediaScraper] ❌ Error in web search: {e}")
+            import traceback
+            print(f"[SocialMediaScraper] Traceback: {traceback.format_exc()}")
+            return {
+                "platform": "web_search",
+                "full_name": full_name,
+                "error": str(e),
+                "success": False
+            }
+    
     def _format_twitter_summary(self, data: Dict) -> str:
         """Format Twitter structured data into conversational summary"""
         parts = []
@@ -449,22 +654,46 @@ class SocialMediaScraper:
     
     def scrape_all_profiles(
         self,
+        full_name: Optional[str] = None,
         linkedin_url: Optional[str] = None,
         instagram_username: Optional[str] = None,
-        twitter_username: Optional[str] = None
+        twitter_username: Optional[str] = None,
+        perform_web_search: bool = True,
+        web_search_depth: int = 10
     ) -> List[Dict]:
         """
-        Scrape all provided social media profiles.
+        Scrape all provided social media profiles and perform comprehensive web search.
         
         Args:
+            full_name: User's full name (used for web search)
             linkedin_url: LinkedIn profile URL
             instagram_username: Instagram username
             twitter_username: Twitter/X username
+            perform_web_search: Whether to perform comprehensive web search
+            web_search_depth: Number of results per search query (default: 10)
             
         Returns:
             List of scraping results for each platform
         """
         results = []
+        
+        # Perform comprehensive web search first if full name is provided
+        if perform_web_search and full_name and full_name.strip():
+            print(f"[SocialMediaScraper] 🌐 Starting comprehensive web search for {full_name}")
+            
+            # Collect username context for better search
+            username_context = None
+            if instagram_username:
+                username_context = instagram_username.strip().lstrip('@')
+            elif twitter_username:
+                username_context = twitter_username.strip().lstrip('@')
+            
+            web_search_result = self.search_web_for_user(
+                full_name=full_name,
+                username=username_context,
+                num_results=web_search_depth
+            )
+            results.append(web_search_result)
         
         if linkedin_url and linkedin_url.strip():
             # Scrape LinkedIn using URL (with Exa crawling)

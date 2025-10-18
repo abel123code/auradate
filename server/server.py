@@ -799,7 +799,18 @@ Example: ["How's your photosynthesis revision going?", "Need help with that alge
 async def update_user_profile(request: UpdateUserProfileRequest):
     """
     Update user profile with full name and social media handles.
-    Scrapes social media profiles (LinkedIn, Instagram, Twitter) and adds context to mem0 memories.
+    
+    Performs comprehensive data gathering:
+    1. Web Search: Uses Exa to search the web for any public information about the user
+    2. Social Media Scraping: Crawls LinkedIn, Instagram, and Twitter profiles
+    3. Content Aggregation: Combines and summarizes all findings using AI
+    4. Memory Storage: Stores all context in mem0 for personalized conversations
+    
+    The web search feature automatically:
+    - Searches multiple query variations to maximize coverage
+    - Uses category-focused searches (LinkedIn profiles, personal sites, etc.)
+    - Crawls all discovered URLs to extract full content
+    - Generates an AI-powered summary from all sources
     """
     try:
         display_name = request.display_name
@@ -817,6 +828,32 @@ async def update_user_profile(request: UpdateUserProfileRequest):
         
         # Scrape social media profiles
         social_media_results = {}
+        
+        # Perform comprehensive web search if full name is provided
+        if full_name and full_name.strip() and full_name != display_name:
+            print(f"[API] 🌐 Performing comprehensive web search for: {full_name}")
+            
+            # Gather username context for better search
+            username_context = None
+            if request.instagram_username:
+                username_context = request.instagram_username.strip().lstrip('@')
+            elif request.twitter_username:
+                username_context = request.twitter_username.strip().lstrip('@')
+            
+            web_search_result = scraper.search_web_for_user(
+                full_name=full_name,
+                username=username_context,
+                num_results=10  # Search depth
+            )
+            social_media_results['web_search'] = web_search_result
+            
+            if web_search_result.get('success'):
+                # Add to memory
+                memory_service.add_social_media_context(
+                    user_id=display_name,
+                    platform='web_search',
+                    context_data=web_search_result.get('data', '')
+                )
         
         # Scrape LinkedIn using URL (Exa will crawl it, Interfaze will format)
         if request.linkedin_url and request.linkedin_url.strip():
@@ -857,7 +894,6 @@ async def update_user_profile(request: UpdateUserProfileRequest):
                     platform='twitter',
                     context_data=twitter_result.get('data', '')
                 )
-                print("AOSUDHKJASBDKJAS", twitter_result)
         
         # Add comprehensive profile data to memory
         memory_service.add_user_profile_data(
@@ -869,11 +905,11 @@ async def update_user_profile(request: UpdateUserProfileRequest):
         # Count successful scrapes
         successful_scrapes = sum(1 for r in social_media_results.values() if r.get('success'))
         
-        print(f"[API] ✅ Profile update complete: {successful_scrapes} social media profiles scraped")
+        print(f"[API] ✅ Profile update complete: {successful_scrapes} sources scraped")
         
         return {
             "success": True,
-            "message": f"Profile updated successfully. Scraped {successful_scrapes} social media profiles.",
+            "message": f"Profile updated successfully. Scraped {successful_scrapes} sources (web search + social media).",
             "display_name": display_name,
             "full_name": full_name,
             "social_media_results": social_media_results,
